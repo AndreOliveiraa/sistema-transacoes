@@ -1,0 +1,104 @@
+// src/server.ts
+import Fastify from "fastify";
+import cors from "@fastify/cors";
+import mongoose from "mongoose";
+
+// 1. Definição do Modelo (Schema)
+const transactionSchema = new mongoose.Schema({
+  pan: { type: String, required: true },
+  brand: { type: String, required: true },
+  amount: { type: Number, required: true },
+  timestamp: { type: Date, default: Date.now },
+  status: { type: String, enum: ["approved", "declined"], required: true },
+  reason: { type: String },
+  authorizationCode: { type: String },
+});
+
+const Transaction = mongoose.model("Transaction", transactionSchema);
+
+// 2. Inicialização do App
+const app = Fastify({ logger: true });
+app.register(cors, { origin: true });
+
+// 3. Engine de Autorização (Lógica de Negócio)
+interface TransactionInput {
+  pan: string;
+  brand: string;
+  amount: number;
+}
+
+const authorizeTransaction = (data: TransactionInput) => {
+  const { pan, brand, amount } = data;
+
+  // Regra 1: Validade do PAN (apenas números e tamanho 16)
+  const cleanPan = pan.replace(/\D/g, "");
+  if (cleanPan.length !== 16) {
+    return { status: "declined", reason: "PAN deve ter 16 dígitos" };
+  }
+
+  // Regra 2: Bandeiras aceitas
+  const allowedBrands = ["visa", "mastercard", "elo"];
+  if (!allowedBrands.includes(brand.toLowerCase())) {
+    return { status: "declined", reason: "Bandeira não permitida" };
+  }
+
+  // Regra 3: Limite de valor
+  if (amount > 1000) {
+    return { status: "declined", reason: "Excede limite permitido" };
+  }
+
+  // Aprovado: Gerar código
+  const authCode = Math.floor(100000 + Math.random() * 900000).toString();
+  return { status: "approved", authorizationCode: authCode };
+};
+
+// 4. Endpoints
+
+// GET: Listar transações
+app.get("/transactions", async () => {
+  const transactions = await Transaction.find().sort({ timestamp: -1 });
+  return transactions;
+});
+
+// POST: Processar transação
+app.post<{ Body: TransactionInput }>(
+  "/transactions",
+  async (request, reply) => {
+    const { pan, brand, amount } = request.body;
+
+    // Executa a engine de regras
+    const result = authorizeTransaction({ pan, brand, amount });
+
+    // Salva no banco
+    const newTransaction = new Transaction({
+      pan, // Nota: Em prod real, o PAN deveria ser criptografado aqui
+      brand,
+      amount,
+      status: result.status,
+      reason: result.reason,
+      authorizationCode: result.authorizationCode,
+    });
+
+    await newTransaction.save();
+    return newTransaction;
+  }
+);
+
+const mongoAtlasUri =
+  "mongodb+srv://andreoliveiramartins22_db_user:nTSvMb93KGGIutLU@cluster-transaction.ltqxgko.mongodb.net/?appName=Cluster-Transaction";
+// 5. Start Server
+const start = async () => {
+  try {
+    // Conecte ao seu MongoDB local ou Atlas string
+    await mongoose.connect(mongoAtlasUri);
+    console.log("MongoDB Conectado");
+
+    await app.listen({ port: 3001 });
+    console.log("Servidor rodando na porta 3001");
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();
