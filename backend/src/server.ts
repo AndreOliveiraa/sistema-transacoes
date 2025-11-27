@@ -2,6 +2,8 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+dotenv.config();
 
 // 1. Definição do Modelo (Schema)
 const transactionSchema = new mongoose.Schema({
@@ -84,13 +86,11 @@ app.post<{ Body: TransactionInput }>(
   }
 );
 
-const mongoAtlasUri =
-  "mongodb+srv://andreoliveiramartins22_db_user:nTSvMb93KGGIutLU@cluster-transaction.ltqxgko.mongodb.net/?appName=Cluster-Transaction";
 // 5. Start Server
 const start = async () => {
   try {
     // Conecte ao seu MongoDB local ou Atlas string
-    await mongoose.connect(mongoAtlasUri);
+    await mongoose.connect(process.env.MONGO_URI!);
     console.log("MongoDB Conectado");
 
     await app.listen({ port: 3001 });
