@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 
-// 1. Definição do Modelo (Schema)
+// 1. Definição do Modelo
 const transactionSchema = new mongoose.Schema({
   pan: { type: String, required: true },
   brand: { type: String, required: true },
@@ -14,6 +14,7 @@ const transactionSchema = new mongoose.Schema({
   status: { type: String, enum: ["approved", "declined"], required: true },
   reason: { type: String },
   authorizationCode: { type: String },
+  transactionType: { type: String, default: "Purchase" },
 });
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
@@ -45,13 +46,18 @@ const authorizeTransaction = (data: TransactionInput) => {
   }
 
   // Regra 3: Limite de valor
-  if (amount > 1000) {
+  if (amount > 1000 || amount < 0) {
     return { status: "declined", reason: "Excede limite permitido" };
   }
 
   // Aprovado: Gerar código
   const authCode = Math.floor(100000 + Math.random() * 900000).toString();
   return { status: "approved", authorizationCode: authCode };
+};
+
+const maskPAN = (pan: string | any[]) => {
+  if (!pan || pan.length < 4) return pan;
+  return `**** **** **** ${pan.slice(-4)}`;
 };
 
 // 4. Endpoints
@@ -68,12 +74,12 @@ app.post<{ Body: TransactionInput }>(
   async (request, reply) => {
     const { pan, brand, amount } = request.body;
 
-    // Executa a engine de regras
     const result = authorizeTransaction({ pan, brand, amount });
 
-    // Salva no banco
+    const maskedPan = maskPAN(pan);
+
     const newTransaction = new Transaction({
-      pan, // Nota: Em prod real, o PAN deveria ser criptografado aqui
+      pan: maskedPan,
       brand,
       amount,
       status: result.status,
@@ -89,7 +95,6 @@ app.post<{ Body: TransactionInput }>(
 // 5. Start Server
 const start = async () => {
   try {
-    // Conecte ao seu MongoDB local ou Atlas string
     await mongoose.connect(process.env.MONGO_URI!);
     console.log("MongoDB Conectado");
 

@@ -22,9 +22,11 @@ function App() {
 
   const [formData, setFormData] = useState({
     pan: "",
-    brand: "Visa",
     amount: "",
+    transactionType: "Compra",
   });
+
+  const [alertMessage, setAlertMessage] = useState(null);
 
   useEffect(() => {
     dispatch(fetchTransactions());
@@ -32,92 +34,200 @@ function App() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.pan || !formData.amount) return;
+
+    const panCleaned = formData.pan.replace(/\D/g, "");
+
+    if (!panCleaned || !formData.amount) {
+      setAlertMessage("Preencha o Número do Cartão e o Valor.");
+      setTimeout(() => setAlertMessage(null), 3000);
+
+      return;
+    }
+
+    setAlertMessage(null);
+
+    const brandToSend = detectedBrand;
 
     dispatch(
       createTransaction({
-        pan: formData.pan,
-        brand: formData.brand,
+        pan: panCleaned,
+        brand: brandToSend || "Outras",
         amount: parseFloat(formData.amount),
+        transactionType: formData.transactionType,
       })
     );
 
-    // Resetar apenas campos de texto
     setFormData({ ...formData, pan: "", amount: "" });
   };
 
-  // Função utilitária para mascarar PAN
-  const maskPAN = (pan) => {
-    if (!pan || pan.length < 4) return pan;
-    return `**** **** **** ${pan.slice(-4)}`;
+  const detectBrand = (pan) => {
+    if (!pan) return null;
+
+    const cleanPan = pan.replace(/\D/g, "");
+
+    if (cleanPan.length < 1) return null;
+
+    if (cleanPan.startsWith("4")) {
+      return "Visa";
+    }
+    if (
+      cleanPan.startsWith("51") ||
+      cleanPan.startsWith("52") ||
+      cleanPan.startsWith("53") ||
+      cleanPan.startsWith("54") ||
+      cleanPan.startsWith("55")
+    ) {
+      return "Mastercard";
+    }
+    if (
+      cleanPan.startsWith("636368") ||
+      cleanPan.startsWith("438935") ||
+      cleanPan.startsWith("5067")
+    ) {
+      return "Elo";
+    }
+
+    return null;
+  };
+
+  const detectedBrand = detectBrand(formData.pan);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+
+    const date = new Date(dateString);
+
+    const options = {
+      year: "2-digit",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    };
+
+    return date.toLocaleTimeString("pt-BR", options).replace(",", " ");
   };
 
   return (
     <Container className="py-5">
-      <h1 className="mb-4 text-center">Autorizador de Pagamentos</h1>
-
+      <h1 className="mb-4 text-center">Processamento de Transações</h1>
       <Row>
         {/* Formulário de Transação */}
-        <Col md={4}>
+        <Col md={3}>
+          {alertMessage && (
+            <Alert
+              className="rounded-3"
+              variant="danger"
+              onClose={() => setAlertMessage(null)}
+              dismissible
+            >
+              {alertMessage}
+            </Alert>
+          )}
           <Card className="mb-4 shadow-sm">
-            <Card.Header className="bg-primary text-white">
-              Nova Transação
-            </Card.Header>
+            <Card.Header className="text-white">Nova Transação</Card.Header>
             <Card.Body>
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3">
-                  <Form.Label>PAN (Cartão)</Form.Label>
+                  <Form.Label className="text-white">
+                    Bandeiras Permitidas
+                  </Form.Label>
+                  <div className="mb-3">
+                    <img
+                      src="bandeira_visa.png"
+                      className={`brand-image ${
+                        detectedBrand === "Visa" ? "highlighted" : ""
+                      }`}
+                    />
+                    <img
+                      src="bandeira_mastercard.png"
+                      className={`brand-image ${
+                        detectedBrand === "Mastercard" ? "highlighted" : ""
+                      }`}
+                    />
+                    <img
+                      src="bandeira_elo.png"
+                      className={`brand-image ${
+                        detectedBrand === "Elo" ? "highlighted" : ""
+                      }`}
+                    />
+                  </div>
+                  <Form.Label className="text-white">
+                    Número do Cartão *
+                  </Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Ex: 1234567812345678"
-                    value={formData.pan}
-                    onChange={(e) =>
-                      setFormData({ ...formData, pan: e.target.value })
+                    placeholder="0000 0000 0000 0000"
+                    value={
+                      formData.pan
+                        .replace(/\D/g, "")
+                        .match(/.{1,4}/g)
+                        ?.join(" ") || ""
                     }
-                    maxLength={16}
+                    onChange={(e) => {
+                      const cleanedValue = e.target.value
+                        .replace(/\s/g, "")
+                        .replace(/\D/g, "");
+                      setFormData({
+                        ...formData,
+                        pan: cleanedValue.slice(0, 16),
+                      });
+                    }}
+                    maxLength={19}
                   />
-                  <Form.Text className="text-muted">
+                  <Form.Text className="text-white">
                     Deve ter 16 dígitos.
                   </Form.Text>
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Bandeira</Form.Label>
-                  <Form.Select
-                    value={formData.brand}
-                    onChange={(e) =>
-                      setFormData({ ...formData, brand: e.target.value })
-                    }
-                  >
-                    <option value="Visa">Visa</option>
-                    <option value="Mastercard">Mastercard</option>
-                    <option value="Elo">Elo</option>
-                    <option value="Amex">Amex (Teste Negada)</option>
-                  </Form.Select>
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Valor (R$)</Form.Label>
+                  <Form.Label className="text-white">Valor (R$) *</Form.Label>
                   <Form.Control
-                    type="number"
+                    type="text"
                     placeholder="0.00"
                     value={formData.amount}
-                    onChange={(e) =>
-                      setFormData({ ...formData, amount: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const cleanValue = e.target.value.replace(/[^0-9.]/g, "");
+                      setFormData({ ...formData, amount: cleanValue });
+                    }}
+                    inputMode="decimal"
                   />
                 </Form.Group>
 
-                <Button variant="primary" type="submit" className="w-100">
+                <Form.Group className="mb-4">
+                  <Form.Label className="text-white">
+                    Tipo de Transação
+                  </Form.Label>
+                  <Form.Select
+                    value={formData.transactionType}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        transactionType: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="Compra">Compra</option>
+                    <option value="Saque">Saque</option>
+                    <option value="Reembolso">Reembolso</option>
+                  </Form.Select>
+                </Form.Group>
+
+                <Button
+                  variant="primary"
+                  type="submit"
+                  className="rounded-pill w-100"
+                >
                   Processar Transação
                 </Button>
               </Form>
             </Card.Body>
           </Card>
         </Col>
-
         {/* Lista de Transações */}
-        <Col md={8}>
+        <Col md={9}>
           <Card className="shadow-sm">
             <Card.Header>Histórico de Transações</Card.Header>
             <Card.Body>
@@ -125,10 +235,13 @@ function App() {
                 <thead>
                   <tr>
                     <th>Status</th>
-                    <th>PAN Mascarado</th>
+                    <th>PAN</th>
                     <th>Bandeira</th>
                     <th>Valor</th>
-                    <th>Detalhes</th>
+                    <th>Tipo</th>
+                    <th>Data/Hora</th>
+                    <th>Código</th>
+                    <th>Motivo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -141,15 +254,16 @@ function App() {
                           <Badge bg="danger">Negado</Badge>
                         )}
                       </td>
-                      <td style={{ fontFamily: "monospace" }}>
-                        {maskPAN(t.pan)}
-                      </td>
+                      <td style={{ fontFamily: "monospace" }}>{t.pan}</td>
                       <td>{t.brand}</td>
                       <td>R$ {t.amount.toFixed(2)}</td>
+                      <td>{t.transactionType || "Compra"}</td>
+                      <td style={{ fontSize: "0.85rem" }}>
+                        {formatDate(t.timestamp)}
+                      </td>
+                      <td>{t.authorizationCode || " "}</td>
                       <td>
-                        {t.status === "approved" ? (
-                          <small>Auth: {t.authorizationCode}</small>
-                        ) : (
+                        {t.status !== "approved" && (
                           <small className="text-danger">{t.reason}</small>
                         )}
                       </td>
@@ -157,7 +271,7 @@ function App() {
                   ))}
                   {transactions.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="text-center">
+                      <td colSpan="8" className="text-center">
                         Nenhuma transação encontrada.
                       </td>
                     </tr>
