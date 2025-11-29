@@ -141,3 +141,33 @@ a {
 .container {
   max-width: 1600px !important;
 }
+
+.pagination {
+  --bs-pagination-color: var(--color-text-light);
+
+  .page-link {
+    background-color: var(--color-dark-bg-card);
+    color: var(--color-text-light);
+    border: 2px solid #384258;
+  }
+}
+
+/* 2. ESTADO HOVER (Passar o mouse) */
+.pagination .page-item:not(.active) .page-link:hover {
+  background-color: #384258;
+  color: var(--color-accent-green);
+  border-color: var(--color-accent-green);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--color-accent-green) !important;
+  border-color: var(--color-accent-green) !important;
+  color: #111 !important;
+  font-weight: 700;
+}
+
+.pagination .page-item.disabled .page-link {
+  background-color: var(--color-dark-bg-card);
+  color: #555 !important;
+  border-color: #2a3447;
+}

@@ -14,11 +14,20 @@ import {
   Card,
   Row,
   Col,
+  Pagination,
 } from "react-bootstrap";
+import { logout } from "./store/authSlice";
+import Login from "./Login";
+import Register from "./Register";
 
 function App() {
+  const { token } = useSelector((state) => state.auth);
+  const [authView, setAuthView] = useState("login");
   const dispatch = useDispatch();
   const { items: transactions } = useSelector((state) => state.transactions);
+  const [limit, setLimit] = useState(10);
+  const currentPage = useSelector((state) => state.transactions.currentPage);
+  const totalPages = useSelector((state) => state.transactions.totalPages);
 
   const [formData, setFormData] = useState({
     pan: "",
@@ -29,8 +38,12 @@ function App() {
   const [alertMessage, setAlertMessage] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchTransactions());
-  }, [dispatch]);
+    dispatch(fetchTransactions({ page: 1, limit }));
+  }, [dispatch, token, limit]);
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -58,6 +71,12 @@ function App() {
     );
 
     setFormData({ ...formData, pan: "", amount: "" });
+  };
+
+  const handlePageChange = (page) => {
+    if (page > 0 && page <= totalPages) {
+      dispatch(fetchTransactions({ page, limit }));
+    }
   };
 
   const detectBrand = (pan) => {
@@ -110,180 +129,244 @@ function App() {
     return date.toLocaleTimeString("pt-BR", options).replace(",", " ");
   };
 
-  return (
-    <Container className="py-5">
-      <h1 className="mb-4 text-center">Processamento de Transações</h1>
-      <Row>
-        {/* Formulário de Transação */}
-        <Col md={3}>
-          {alertMessage && (
-            <Alert
-              className="rounded-3"
-              variant="danger"
-              onClose={() => setAlertMessage(null)}
-              dismissible
-            >
-              {alertMessage}
-            </Alert>
-          )}
-          <Card className="mb-4 shadow-sm">
-            <Card.Header className="text-white">Nova Transação</Card.Header>
-            <Card.Body>
-              <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-3">
-                  <Form.Label className="text-white">
-                    Bandeiras Permitidas
-                  </Form.Label>
-                  <div className="mb-3">
-                    <img
-                      src="bandeira_visa.png"
-                      className={`brand-image ${
-                        detectedBrand === "Visa" ? "highlighted" : ""
-                      }`}
-                    />
-                    <img
-                      src="bandeira_mastercard.png"
-                      className={`brand-image ${
-                        detectedBrand === "Mastercard" ? "highlighted" : ""
-                      }`}
-                    />
-                    <img
-                      src="bandeira_elo.png"
-                      className={`brand-image ${
-                        detectedBrand === "Elo" ? "highlighted" : ""
-                      }`}
-                    />
-                  </div>
-                  <Form.Label className="text-white">
-                    Número do Cartão *
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="0000 0000 0000 0000"
-                    value={
-                      formData.pan
-                        .replace(/\D/g, "")
-                        .match(/.{1,4}/g)
-                        ?.join(" ") || ""
-                    }
-                    onChange={(e) => {
-                      const cleanedValue = e.target.value
-                        .replace(/\s/g, "")
-                        .replace(/\D/g, "");
-                      setFormData({
-                        ...formData,
-                        pan: cleanedValue.slice(0, 16),
-                      });
-                    }}
-                    maxLength={19}
-                  />
-                  <Form.Text className="text-white">
-                    Deve ter 16 dígitos.
-                  </Form.Text>
-                </Form.Group>
+  const renderPaginationItems = () => {
+    let items = [];
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
 
-                <Form.Group className="mb-3">
-                  <Form.Label className="text-white">Valor (R$) *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="0.00"
-                    value={formData.amount}
-                    onChange={(e) => {
-                      const cleanValue = e.target.value.replace(/[^0-9.]/g, "");
-                      setFormData({ ...formData, amount: cleanValue });
-                    }}
-                    inputMode="decimal"
-                  />
-                </Form.Group>
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+    items.push(
+      <Pagination.Prev
+        key="prev"
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+      />
+    );
+    for (let number = startPage; number <= endPage; number++) {
+      items.push(
+        <Pagination.Item
+          key={number}
+          active={number === currentPage}
+          onClick={() => handlePageChange(number)}
+        >
+          {number}
+        </Pagination.Item>
+      );
+    }
+    items.push(
+      <Pagination.Next
+        key="next"
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+      />
+    );
 
-                <Form.Group className="mb-4">
-                  <Form.Label className="text-white">
-                    Tipo de Transação
-                  </Form.Label>
-                  <Form.Select
-                    value={formData.transactionType}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        transactionType: e.target.value,
-                      })
-                    }
+    return items;
+  };
+
+  if (token) {
+    return (
+      <Container className="py-5">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h1 className="m-0">Processamento de Transações</h1>
+
+          <Button
+            variant="outline-danger"
+            onClick={handleLogout}
+            className="d-flex align-items-center gap-2"
+          >
+            {/* Você pode adicionar um ícone aqui se quiser, ex: 🚪 */}
+            Sair
+          </Button>
+        </div>
+        <Row>
+          {/* Formulário de Transação */}
+          <Col md={3}>
+            {alertMessage && (
+              <Alert
+                className="rounded-3"
+                variant="danger"
+                onClose={() => setAlertMessage(null)}
+                dismissible
+              >
+                {alertMessage}
+              </Alert>
+            )}
+            <Card className="mb-4 shadow-sm">
+              <Card.Header className="text-white">Nova Transação</Card.Header>
+              <Card.Body>
+                <Form onSubmit={handleSubmit}>
+                  <Form.Group className="mb-3">
+                    <Form.Label className="text-white">
+                      Bandeiras Permitidas
+                    </Form.Label>
+                    <div className="mb-3">
+                      <img
+                        src="bandeira_visa.png"
+                        className={`brand-image ${
+                          detectedBrand === "Visa" ? "highlighted" : ""
+                        }`}
+                      />
+                      <img
+                        src="bandeira_mastercard.png"
+                        className={`brand-image ${
+                          detectedBrand === "Mastercard" ? "highlighted" : ""
+                        }`}
+                      />
+                      <img
+                        src="bandeira_elo.png"
+                        className={`brand-image ${
+                          detectedBrand === "Elo" ? "highlighted" : ""
+                        }`}
+                      />
+                    </div>
+                    <Form.Label className="text-white">
+                      Número do Cartão *
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="0000 0000 0000 0000"
+                      value={
+                        formData.pan
+                          .replace(/\D/g, "")
+                          .match(/.{1,4}/g)
+                          ?.join(" ") || ""
+                      }
+                      onChange={(e) => {
+                        const cleanedValue = e.target.value
+                          .replace(/\s/g, "")
+                          .replace(/\D/g, "");
+                        setFormData({
+                          ...formData,
+                          pan: cleanedValue.slice(0, 16),
+                        });
+                      }}
+                      maxLength={19}
+                    />
+                    <Form.Text className="text-white">
+                      Deve ter 16 dígitos.
+                    </Form.Text>
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label className="text-white">Valor (R$) *</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="0.00"
+                      value={formData.amount}
+                      onChange={(e) => {
+                        const cleanValue = e.target.value.replace(
+                          /[^0-9.]/g,
+                          ""
+                        );
+                        setFormData({ ...formData, amount: cleanValue });
+                      }}
+                      inputMode="decimal"
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-4">
+                    <Form.Label className="text-white">
+                      Tipo de Transação
+                    </Form.Label>
+                    <Form.Select
+                      value={formData.transactionType}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          transactionType: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="Compra">Compra</option>
+                      <option value="Saque">Saque</option>
+                      <option value="Reembolso">Reembolso</option>
+                    </Form.Select>
+                  </Form.Group>
+
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    className="rounded-pill w-100"
                   >
-                    <option value="Compra">Compra</option>
-                    <option value="Saque">Saque</option>
-                    <option value="Reembolso">Reembolso</option>
-                  </Form.Select>
-                </Form.Group>
-
-                <Button
-                  variant="primary"
-                  type="submit"
-                  className="rounded-pill w-100"
-                >
-                  Processar Transação
-                </Button>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-        {/* Lista de Transações */}
-        <Col md={9}>
-          <Card className="shadow-sm">
-            <Card.Header>Histórico de Transações</Card.Header>
-            <Card.Body>
-              <Table striped bordered hover responsive>
-                <thead>
-                  <tr>
-                    <th>Status</th>
-                    <th>PAN</th>
-                    <th>Bandeira</th>
-                    <th>Valor</th>
-                    <th>Tipo</th>
-                    <th>Data/Hora</th>
-                    <th>Código</th>
-                    <th>Motivo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((t) => (
-                    <tr key={t._id}>
-                      <td>
-                        {t.status === "approved" ? (
-                          <Badge bg="success">Aprovado</Badge>
-                        ) : (
-                          <Badge bg="danger">Negado</Badge>
-                        )}
-                      </td>
-                      <td style={{ fontFamily: "monospace" }}>{t.pan}</td>
-                      <td>{t.brand}</td>
-                      <td>R$ {t.amount.toFixed(2)}</td>
-                      <td>{t.transactionType || "Compra"}</td>
-                      <td style={{ fontSize: "0.85rem" }}>
-                        {formatDate(t.timestamp)}
-                      </td>
-                      <td>{t.authorizationCode || " "}</td>
-                      <td>
-                        {t.status !== "approved" && (
-                          <small className="text-danger">{t.reason}</small>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {transactions.length === 0 && (
+                    Processar Transação
+                  </Button>
+                </Form>
+              </Card.Body>
+            </Card>
+          </Col>
+          {/* Lista de Transações */}
+          <Col md={9}>
+            <Card className="shadow-sm">
+              <Card.Header>Histórico de Transações</Card.Header>
+              <Card.Body>
+                <Table striped bordered hover responsive>
+                  <thead>
                     <tr>
-                      <td colSpan="8" className="text-center">
-                        Nenhuma transação encontrada.
-                      </td>
+                      <th>Status</th>
+                      <th>PAN</th>
+                      <th>Bandeira</th>
+                      <th>Valor</th>
+                      <th>Tipo</th>
+                      <th>Data/Hora</th>
+                      <th>Código</th>
+                      <th>Motivo</th>
                     </tr>
-                  )}
-                </tbody>
-              </Table>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
-  );
+                  </thead>
+                  <tbody>
+                    {transactions.map((t) => (
+                      <tr key={t._id}>
+                        <td>
+                          {t.status === "approved" ? (
+                            <Badge bg="success">Aprovado</Badge>
+                          ) : (
+                            <Badge bg="danger">Negado</Badge>
+                          )}
+                        </td>
+                        <td style={{ fontFamily: "monospace" }}>{t.pan}</td>
+                        <td>{t.brand}</td>
+                        <td>R$ {t.amount.toFixed(2)}</td>
+                        <td>{t.transactionType || "Compra"}</td>
+                        <td style={{ fontSize: "0.85rem" }}>
+                          {formatDate(t.timestamp)}
+                        </td>
+                        <td>{t.authorizationCode || " "}</td>
+                        <td>
+                          {t.status !== "approved" && (
+                            <small className="text-danger">{t.reason}</small>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {transactions.length === 0 && (
+                      <tr>
+                        <td colSpan="8" className="text-center">
+                          Nenhuma transação encontrada.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </Table>
+                {totalPages > 1 && (
+                  <div className="d-flex justify-content-center mt-3">
+                    <Pagination>{renderPaginationItems()}</Pagination>
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
+  if (authView === "login") {
+    return <Login onSwitchToRegister={() => setAuthView("register")} />;
+  } else {
+    return <Register onSuccessfulRegistration={() => setAuthView("login")} />;
+  }
 }
 
 export default App;
