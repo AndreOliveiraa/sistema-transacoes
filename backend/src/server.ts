@@ -155,8 +155,7 @@ app.post<{ Body: TransactionInput }>(
 
 // Start Server
 const start = async () => {
-  const MONGO_URI =
-    process.env.MONGO_URI || "mongodb://localhost:27017/payment_auth";
+  const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017";
 
   try {
     await mongoose.connect(MONGO_URI);
