@@ -93,22 +93,21 @@ a {
 }
 
 .table {
-  color: white;
-
   border: 1px solid rgba(167, 233, 127, 0.2);
-  border-radius: 8px;
   overflow: hidden;
 }
 
 .table > :not(caption) > * > * {
   padding: 0.8rem 0.8rem;
-  background-color: var(--color-dark-bg-card);
+  /* background-color: var(--color-dark-bg-card); */
+  background-color: #1a2333;
   border-bottom-width: 1px;
   border-color: #2a3447;
 }
 .table thead th {
   background-color: #2a3447;
   border-bottom: 2px solid var(--color-accent-green);
+  border-top: 2px solid var(--color-accent-green);
   color: var(--color-accent-green);
   font-size: 0.85rem;
   text-transform: uppercase;
@@ -116,7 +115,7 @@ a {
 }
 
 .table-striped > tbody > tr:nth-of-type(odd) > * {
-  background-color: #1a2333;
+  background-color: #121a26;
 }
 
 .table-hover > tbody > tr:hover > * {
@@ -152,7 +151,6 @@ a {
   }
 }
 
-/* 2. ESTADO HOVER (Passar o mouse) */
 .pagination .page-item:not(.active) .page-link:hover {
   background-color: #384258;
   color: var(--color-accent-green);
@@ -170,4 +168,8 @@ a {
   background-color: var(--color-dark-bg-card);
   color: #555 !important;
   border-color: #2a3447;
+}
+
+.text-light-custom {
+  color: var(--color-text-light) !important;
 }

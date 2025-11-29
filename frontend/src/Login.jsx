@@ -22,10 +22,10 @@ function Login({ onSwitchToRegister }) {
       style={{ height: "100vh" }}
     >
       <Card style={{ width: "400px", padding: "20px" }} className="shadow">
-        <h2 className="text-center mb-4 text-white">Login</h2>
+        <h2 className="text-center mb-4 text-light-custom">Login</h2>
         {error && <Alert variant="danger">{error}</Alert>}
         <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3 text-white">
+          <Form.Group className="mb-3 text-light-custom">
             <Form.Label>Email</Form.Label>
             <Form.Control
               type="email"
@@ -34,7 +34,7 @@ function Login({ onSwitchToRegister }) {
               required
             />
           </Form.Group>
-          <Form.Group className="mb-3 text-white">
+          <Form.Group className="mb-3 text-light-custom">
             <Form.Label>Senha</Form.Label>
             <Form.Control
               type="password"

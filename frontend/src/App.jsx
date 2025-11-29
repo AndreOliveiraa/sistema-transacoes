@@ -196,11 +196,13 @@ function App() {
               </Alert>
             )}
             <Card className="mb-4 shadow-sm">
-              <Card.Header className="text-white">Nova Transação</Card.Header>
+              <Card.Header className="text-light-custom">
+                Nova Transação
+              </Card.Header>
               <Card.Body>
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
-                    <Form.Label className="text-white">
+                    <Form.Label className="text-light-custom">
                       Bandeiras Permitidas
                     </Form.Label>
                     <div className="mb-3">
@@ -223,7 +225,7 @@ function App() {
                         }`}
                       />
                     </div>
-                    <Form.Label className="text-white">
+                    <Form.Label className="text-light-custom">
                       Número do Cartão *
                     </Form.Label>
                     <Form.Control
@@ -246,13 +248,15 @@ function App() {
                       }}
                       maxLength={19}
                     />
-                    <Form.Text className="text-white">
+                    <Form.Text className="text-light-custom">
                       Deve ter 16 dígitos.
                     </Form.Text>
                   </Form.Group>
 
                   <Form.Group className="mb-3">
-                    <Form.Label className="text-white">Valor (R$) *</Form.Label>
+                    <Form.Label className="text-light-custom">
+                      Valor (R$) *
+                    </Form.Label>
                     <Form.Control
                       type="text"
                       placeholder="0.00"
@@ -269,7 +273,7 @@ function App() {
                   </Form.Group>
 
                   <Form.Group className="mb-4">
-                    <Form.Label className="text-white">
+                    <Form.Label className="text-light-custom">
                       Tipo de Transação
                     </Form.Label>
                     <Form.Select
@@ -326,14 +330,28 @@ function App() {
                             <Badge bg="danger">Negado</Badge>
                           )}
                         </td>
-                        <td style={{ fontFamily: "monospace" }}>{t.pan}</td>
-                        <td>{t.brand}</td>
-                        <td>R$ {t.amount.toFixed(2)}</td>
-                        <td>{t.transactionType || "Compra"}</td>
-                        <td style={{ fontSize: "0.85rem" }}>
+                        <td
+                          style={{ fontFamily: "monospace" }}
+                          className="text-light-custom"
+                        >
+                          {t.pan}
+                        </td>
+                        <td className="text-light-custom">{t.brand}</td>
+                        <td className="text-light-custom">
+                          R$ {t.amount.toFixed(2)}
+                        </td>
+                        <td className="text-light-custom">
+                          {t.transactionType || "Compra"}
+                        </td>
+                        <td
+                          style={{ fontSize: "0.85rem" }}
+                          className="text-light-custom"
+                        >
                           {formatDate(t.timestamp)}
                         </td>
-                        <td>{t.authorizationCode || " "}</td>
+                        <td className="text-light-custom">
+                          {t.authorizationCode || " "}
+                        </td>
                         <td>
                           {t.status !== "approved" && (
                             <small className="text-danger">{t.reason}</small>
@@ -343,7 +361,10 @@ function App() {
                     ))}
                     {transactions.length === 0 && (
                       <tr>
-                        <td colSpan="8" className="text-center">
+                        <td
+                          colSpan="8"
+                          className="text-center text-light-custom"
+                        >
                           Nenhuma transação encontrada.
                         </td>
                       </tr>

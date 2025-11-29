@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import fastifyJwt from "@fastify/jwt";
 import bcrypt from "bcryptjs";
 import { FastifyReply, FastifyRequest } from "fastify";
+import { authorizeTransaction, TransactionInput } from "./authEngine";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -58,39 +59,6 @@ interface PaginationQuery {
   page?: string;
   limit?: string;
 }
-
-// Engine de Autorização (Lógica de Negócio)
-interface TransactionInput {
-  pan: string;
-  brand: string;
-  amount: number;
-  transactionType: string;
-}
-
-const authorizeTransaction = (data: TransactionInput) => {
-  const { pan, brand, amount, transactionType } = data;
-
-  // Regra 1: Validade do PAN (apenas números e tamanho 16)
-  const cleanPan = pan.replace(/\D/g, "");
-  if (cleanPan.length !== 16) {
-    return { status: "declined", reason: "PAN deve ter 16 dígitos" };
-  }
-
-  // Regra 2: Bandeiras aceitas
-  const allowedBrands = ["visa", "mastercard", "elo"];
-  if (!allowedBrands.includes(brand.toLowerCase())) {
-    return { status: "declined", reason: "Bandeira não permitida" };
-  }
-
-  // Regra 3: Limite de valor
-  if (amount > 1000 || amount < 0) {
-    return { status: "declined", reason: "Excede limite permitido" };
-  }
-
-  // Aprovado: Gerar código
-  const authCode = Math.floor(100000 + Math.random() * 900000).toString();
-  return { status: "approved", authorizationCode: authCode };
-};
 
 const maskPAN = (pan: string | any[]) => {
   if (!pan || pan.length < 4) return pan;
@@ -166,7 +134,6 @@ app.post<{ Body: TransactionInput }>(
       pan,
       brand,
       amount,
-      transactionType,
     });
 
     const maskedPan = maskPAN(pan);
@@ -188,14 +155,26 @@ app.post<{ Body: TransactionInput }>(
 
 // Start Server
 const start = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI!);
-    console.log("MongoDB Conectado");
+  const MONGO_URI =
+    process.env.MONGO_URI || "mongodb://localhost:27017/payment_auth";
 
-    await app.listen({ port: 3001 });
-    console.log("Servidor rodando na porta 3001");
+  try {
+    await mongoose.connect(MONGO_URI);
+
+    if (process.env.MONGO_URI) {
+      console.log("MongoDB (Nuvem/Customizado) Conectado.");
+    } else {
+      console.log("MongoDB (Local) Conectado.");
+    }
+
+    const port = parseInt(process.env.PORT || "3001");
+    await app.listen({ port });
+
+    console.log(`Servidor rodando em http://localhost:${port}`);
   } catch (err) {
-    app.log.error(err);
+    app.log.error(
+      "Falha ao iniciar o servidor ou conectar ao DB." + String(err)
+    );
     process.exit(1);
   }
 };

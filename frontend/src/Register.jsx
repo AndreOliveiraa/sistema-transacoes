@@ -39,11 +39,11 @@ function Register({ onSuccessfulRegistration }) {
       style={{ height: "100vh" }}
     >
       <Card style={{ width: "400px", padding: "20px" }} className="shadow">
-        <h2 className="text-center mb-4 text-white">Criar Conta</h2>
+        <h2 className="text-center mb-4 text-light-custom">Criar Conta</h2>
         {message && <Alert variant="success">{message}</Alert>}
         {error && <Alert variant="danger">{error}</Alert>}
         <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3  text-white">
+          <Form.Group className="mb-3  text-light-custom">
             <Form.Label>Email</Form.Label>
             <Form.Control
               type="email"
@@ -52,7 +52,7 @@ function Register({ onSuccessfulRegistration }) {
               required
             />
           </Form.Group>
-          <Form.Group className="mb-3 text-white">
+          <Form.Group className="mb-3 text-light-custom">
             <Form.Label>Senha</Form.Label>
             <Form.Control
               type="password"
