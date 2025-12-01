@@ -35,7 +35,7 @@ function App() {
     transactionType: "Compra",
   });
 
-  const [alertMessage, setAlertMessage] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     dispatch(fetchTransactions({ page: 1, limit }));
@@ -48,16 +48,28 @@ function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    setValidationErrors({});
+
     const panCleaned = formData.pan.replace(/\D/g, "");
+    const amountValue = formData.amount / 100;
 
-    if (!panCleaned || !formData.amount) {
-      setAlertMessage("Preencha o Número do Cartão e o Valor.");
-      setTimeout(() => setAlertMessage(null), 3000);
+    let hasError = false;
+    let newErrors = {};
 
-      return;
+    if (!panCleaned) {
+      newErrors.pan = true;
+      hasError = true;
+    }
+    if (!amountValue || isNaN(amountValue) || amountValue <= 0) {
+      newErrors.amount = true;
+      hasError = true;
     }
 
-    setAlertMessage(null);
+    if (hasError) {
+      setValidationErrors(newErrors);
+      setTimeout(() => setValidationErrors({}), 3000);
+      return;
+    }
 
     const brandToSend = detectedBrand;
 
@@ -65,7 +77,7 @@ function App() {
       createTransaction({
         pan: panCleaned,
         brand: brandToSend || "Outras",
-        amount: parseFloat(formData.amount),
+        amount: parseFloat(amountValue),
         transactionType: formData.transactionType,
       })
     );
@@ -129,6 +141,32 @@ function App() {
     return date.toLocaleTimeString("pt-BR", options).replace(",", " ");
   };
 
+  const formatAmount = (value) => {
+    const cleanValue = String(value || "").replace(/\D/g, "");
+
+    if (!cleanValue) {
+      return "";
+    }
+
+    const amountInCents = parseInt(cleanValue, 10);
+
+    return (amountInCents / 100).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      style: "currency",
+      currency: "BRL",
+    });
+  };
+
+  const handleAmountChange = (e) => {
+    const rawValue = e.target.value;
+    const cleanValueInCents = rawValue.replace(/[^0-9]/g, "");
+
+    if (cleanValueInCents.length > 9) return;
+
+    setFormData({ ...formData, amount: cleanValueInCents });
+  };
+
   const renderPaginationItems = () => {
     let items = [];
     const maxPagesToShow = 5;
@@ -178,23 +216,12 @@ function App() {
             onClick={handleLogout}
             className="d-flex align-items-center gap-2"
           >
-            {/* Você pode adicionar um ícone aqui se quiser, ex: 🚪 */}
             Sair
           </Button>
         </div>
         <Row>
           {/* Formulário de Transação */}
           <Col md={3}>
-            {alertMessage && (
-              <Alert
-                className="rounded-3"
-                variant="danger"
-                onClose={() => setAlertMessage(null)}
-                dismissible
-              >
-                {alertMessage}
-              </Alert>
-            )}
             <Card className="mb-4 shadow-sm">
               <Card.Header className="text-light-custom">
                 Nova Transação
@@ -247,7 +274,13 @@ function App() {
                         });
                       }}
                       maxLength={19}
+                      isInvalid={validationErrors.pan}
                     />
+                    {validationErrors.pan && (
+                      <Form.Control.Feedback type="invalid">
+                        Preencha o número do cartão
+                      </Form.Control.Feedback>
+                    )}
                     <Form.Text className="text-light-custom">
                       Deve ter 16 dígitos.
                     </Form.Text>
@@ -255,21 +288,20 @@ function App() {
 
                   <Form.Group className="mb-3">
                     <Form.Label className="text-light-custom">
-                      Valor (R$) *
+                      Valor *
                     </Form.Label>
                     <Form.Control
                       type="text"
-                      placeholder="0.00"
-                      value={formData.amount}
-                      onChange={(e) => {
-                        const cleanValue = e.target.value.replace(
-                          /[^0-9.]/g,
-                          ""
-                        );
-                        setFormData({ ...formData, amount: cleanValue });
-                      }}
-                      inputMode="decimal"
+                      placeholder="R$ 0,00"
+                      value={formatAmount(formData.amount)}
+                      onChange={handleAmountChange}
+                      isInvalid={validationErrors.amount}
                     />
+                    {validationErrors.amount && (
+                      <Form.Control.Feedback type="invalid">
+                        O valor mínimo é R$ 0,01
+                      </Form.Control.Feedback>
+                    )}
                   </Form.Group>
 
                   <Form.Group className="mb-4">
