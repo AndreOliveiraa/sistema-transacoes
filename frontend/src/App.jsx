@@ -35,6 +35,7 @@ function App() {
     transactionType: "Compra",
   });
 
+  const [alertMessage, setAlertMessage] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
@@ -45,7 +46,7 @@ function App() {
     dispatch(logout());
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     setValidationErrors({});
@@ -73,7 +74,7 @@ function App() {
 
     const brandToSend = detectedBrand;
 
-    dispatch(
+    const resultAction = await dispatch(
       createTransaction({
         pan: panCleaned,
         brand: brandToSend || "Outras",
@@ -82,7 +83,24 @@ function App() {
       })
     );
 
-    setFormData({ ...formData, pan: "", amount: "" });
+    if (createTransaction.fulfilled.match(resultAction)) {
+      dispatch(fetchTransactions({ page: 1, limit: limit }));
+      const responseData = resultAction.payload;
+
+      if (responseData.status === "approved") {
+        setAlertMessage(`Transação aprovada!`);
+      } else {
+        setAlertMessage(`Transação negada. Motivo: ${responseData.reason}`);
+      }
+
+      setTimeout(() => setAlertMessage(null), 5000);
+      setFormData({ ...formData, pan: "", amount: "" });
+    } else {
+      setAlertMessage(
+        "Erro ao processar a transação. Tente novamente mais tarde."
+      );
+      setTimeout(() => setAlertMessage(null), 5000);
+    }
   };
 
   const handlePageChange = (page) => {
@@ -333,6 +351,16 @@ function App() {
                 </Form>
               </Card.Body>
             </Card>
+            {alertMessage && (
+              <Alert
+                className="rounded-3"
+                variant="danger"
+                onClose={() => setAlertMessage(null)}
+                dismissible
+              >
+                {alertMessage}
+              </Alert>
+            )}
           </Col>
           {/* Lista de Transações */}
           <Col md={9}>
