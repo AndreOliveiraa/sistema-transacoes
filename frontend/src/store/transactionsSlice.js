@@ -18,15 +18,21 @@ export const fetchTransactions = createAsyncThunk(
   async (params = { page: 1, limit: 10 }, { getState }) => {
     const token = getState().auth.token;
 
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      params: { page: params.page, limit: params.limit },
-    };
+    if (!token) {
+      return rejectWithValue("Usuário não autenticado");
+    }
 
-    const response = await axios.get(API_URL, config);
-    return response.data;
+    try {
+      const config = {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { page: params.page, limit: params.limit },
+      };
+
+      const response = await axios.get(API_URL, config);
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || "Erro ao buscar");
+    }
   }
 );
 

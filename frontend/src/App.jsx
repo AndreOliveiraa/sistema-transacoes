@@ -19,6 +19,7 @@ import {
 import { logout } from "./store/authSlice";
 import Login from "./Login";
 import Register from "./Register";
+import useAutoLogout from "./hooks/useAutoLogout";
 
 function App() {
   const { token } = useSelector((state) => state.auth);
@@ -37,6 +38,9 @@ function App() {
 
   const [alertMessage, setAlertMessage] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
+
+  const INACTIVITY_LIMIT = 300000;
+  useAutoLogout(INACTIVITY_LIMIT);
 
   useEffect(() => {
     dispatch(fetchTransactions({ page: 1, limit }));
@@ -116,6 +120,9 @@ function App() {
 
     if (cleanPan.length < 1) return null;
 
+    if (cleanPan.startsWith("34") || cleanPan.startsWith("37")) {
+      return "Amex";
+    }
     if (cleanPan.startsWith("4")) {
       return "Visa";
     }
